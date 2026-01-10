@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package visual;
+
+import "common.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "proxy-system-backend/proto/visual;visual";
+
+message VisualMessage {
+  // 插件生成的唯一 ID
+  string id = 1;
+
+  // 所属连接
+  string conn_id = 2;
+
+  // 时间戳（通常继承 RawPacket）
+  int64 timestamp = 3;
+
+  // 数据方向
+  common.PacketDirection direction = 4;
+
+  // ===== 展示相关 =====
+
+  // 消息名（LoginReq / Move / SyncData）
+  string name = 5;
+
+  // 分类（auth / battle / sync / chat）
+  string category = 6;
+
+  // 一行摘要（UI 列表用）
+  string summary = 7;
+
+  // ===== 结构化数据 =====
+
+  // 解码后的字段（适合树形展示）
+  google.protobuf.Struct fields = 8;
+
+  // ===== 可选附加信息 =====
+
+  // 原始数据（可选，用于导出 / 回放）
+  bytes raw = 9;
+
+  // 标签（搜索 / 高亮 / 规则）
+  repeated string tags = 10;
+}

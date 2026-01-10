@@ -1,0 +1,1 @@
+protoc  -I proto  --go_out=.  --go-grpc_out=.   --go_opt=module=proxy-system-backend  --go-grpc_opt=module=proxy-system-backend  proto/*.proto
