@@ -1,37 +1,35 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/go-plugin"
-	"os/exec"
-	"proxy-system-backend/cmd/test/common"
+	p "proxy-system-backend/internal/modules/plugin"
 )
 
+type DemoPlugin struct{}
+
+func (d *DemoPlugin) Decode(payload []byte, isClient bool) (*p.DecodeResult, error) {
+	return &p.DecodeResult{
+		IsClient: isClient,
+		Time:     time.Now().UnixMilli(),
+		Data:     []byte(fmt.Sprintf(`{"raw":%q}`, payload)),
+	}, nil
+}
+
+func (d *DemoPlugin) Encode(data []byte) ([]byte, error) {
+	return data, nil
+}
+
 func main() {
-	client := plugin.NewClient(&plugin.ClientConfig{
-		HandshakeConfig: plugin.HandshakeConfig{
-			ProtocolVersion:  1,
-			MagicCookieKey:   "GAME_PROTOCOL_PLUGIN",
-			MagicCookieValue: "hello",
+	plugin.Serve(&plugin.ServeConfig{
+		HandshakeConfig: p.Handshake,
+		Plugins: map[string]plugin.Plugin{
+			"protocol": &p.ProtocolPluginImpl{
+				Impl: &DemoPlugin{},
+			},
 		},
-		Plugins: common.PluginMap,
-		Cmd:     exec.Command("E:\\reply\\backend\\cmd\\test\\client\\test.exe"),
-
-		AllowedProtocols: []plugin.Protocol{
-			plugin.ProtocolGRPC},
+		GRPCServer: plugin.DefaultGRPCServer,
 	})
-	defer client.Kill()
-	rpcClient, err := client.Client()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	raw, err := rpcClient.Dispense("kv_grpc")
-
-	decoder := raw.(common.GameProtocol)
-
-	info, _ := decoder.Info(context.Background())
-	fmt.Println("info ", info.Name)
-
 }

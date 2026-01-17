@@ -8,6 +8,7 @@ const (
 	EventRuleUpdated  EventType = "rule_updated"
 	EventPluginLoaded EventType = "plugin_loaded"
 	EventTraffic      EventType = "EventTraffic"
+	EventParsed       EventType = "EventParsed"
 )
 
 type Event struct {

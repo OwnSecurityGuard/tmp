@@ -24,6 +24,9 @@ type Config struct {
 	Enabled   bool  `json:"enabled"`
 	CreatedAt int64 `json:"created_at"`
 	UpdatedAt int64 `json:"updated_at"`
+
+	BlockIPs   []string `json:"block_ips,omitempty"`
+	BlockPorts []string `json:"block_ports,omitempty"`
 }
 
 func (c *Config) BuildCipher() (core.Cipher, error) {

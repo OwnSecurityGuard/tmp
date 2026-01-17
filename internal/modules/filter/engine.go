@@ -44,7 +44,7 @@ func (e *Engine) Load(cfg Config, rules []Rule) error {
 	return nil
 }
 
-func (e *Engine) Match(ctx traffic.PacketContext) bool {
+func (e *Engine) Match(ctx *traffic.PacketContext) bool {
 	if !e.enabled.Load() {
 		return true
 	}

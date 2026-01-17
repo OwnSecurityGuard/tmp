@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"log"
 	"proxy-system-backend/internal/app"
 	"proxy-system-backend/internal/handler"
+	"proxy-system-backend/internal/modules/plugin"
 	"proxy-system-backend/internal/modules/websocket"
+	pluginstore "proxy-system-backend/internal/storage/plugin"
 
 	"time"
 )
@@ -44,14 +48,37 @@ func main() {
 	}))
 	// WebSocket
 	r.GET("/api/ws", hub.Handle)
+	db, _ := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
 
 	// API
 	proxyHandler := handler.NewProxyHandler(appCore)
+	pluginHandler := handler.NewPluginHandler(appCore)
+	pluginMgr := plugin.NewManager()
+
+	db.AutoMigrate(pluginstore.PluginModel{})
+	pluginRepo := pluginstore.NewPluginRepo(db)
+
+	pluginSvc := app.NewPluginService(pluginRepo, pluginMgr)
+	//appCore.
+	appCore.SetPluginMgr(pluginSvc)
+	if err := pluginSvc.Bootstrap(); err != nil {
+		log.Println("plugin bootstrap failed:", err)
+		return
+	}
+
 	api := r.Group("/api")
 	{
 		api.POST("/proxy/start", proxyHandler.StartProxy)
 	}
-
+	plugins := api.Group("/plugins")
+	{
+		plugins.POST("", pluginHandler.Register)
+		plugins.GET("", pluginHandler.List)
+		plugins.GET("/:name", pluginHandler.Get)
+		plugins.POST("/:name/load", pluginHandler.Load)
+		plugins.POST("/:name/unload", pluginHandler.Unload)
+		plugins.POST("/upload", pluginHandler.Upload)
+	}
 	// ===== 5️⃣ Start =====
 	addr := ":8081"
 	log.Println("🚀 server listening on", addr)

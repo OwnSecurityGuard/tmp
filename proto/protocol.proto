@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package plugin;
+
+option go_package = "proxy-system-backend/internal/modules/plugin;plugin";
+
+service Protocol {
+  rpc Decode (DecodeRequest) returns (DecodeResponse);
+  rpc Encode (EncodeRequest) returns (EncodeResponse);
+}
+
+message DecodeRequest {
+  bytes payload = 1;
+  bool  is_client = 2;
+}
+
+message DecodeResponse {
+  bool  is_client = 1;
+  int64 time      = 2;
+  bytes data      = 3;
+}
+
+message EncodeRequest {
+  bytes data = 1;
+}
+
+message EncodeResponse {
+  bytes data = 1;
+}

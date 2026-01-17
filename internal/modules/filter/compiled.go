@@ -18,7 +18,7 @@ type CompiledRule struct {
 	DstPorts  []PortRange
 }
 
-func (r *CompiledRule) Match(ctx traffic.PacketContext) bool {
+func (r *CompiledRule) Match(ctx *traffic.PacketContext) bool {
 
 	// 1️⃣ 方向匹配
 	if r.Direction != traffic.DirectionUnknown &&

@@ -21,9 +21,9 @@ func Wire() *Wiring {
 	app := New()
 
 	// 3️⃣ websocket notifier
-	wsNotifier := NewWSNotifier(wsHub)
-	app.Subscribe(wsNotifier.HandleEvent)
-
+	//wsNotifier := NewWSNotifier(wsHub)
+	//app.Subscribe(wsNotifier.HandleEvent)
+	//
 	//db, _ := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
 	//db.AutoMigrate(&filterstore.RuleModel{})
 	//
@@ -31,7 +31,7 @@ func Wire() *Wiring {
 	//engine := filter.NewEngine()
 	//loader := NewFilterLoader(repo, engine)
 	//_ = loader.Load(context.Background())
-
+	//repo.
 	return &Wiring{
 		App:   app,
 		WSHub: wsHub,
