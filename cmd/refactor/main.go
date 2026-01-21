@@ -50,21 +50,29 @@ func main() {
 	r.GET("/api/ws", hub.Handle)
 	db, _ := gorm.Open(sqlite.Open("data.db"), &gorm.Config{})
 
-	// API
-	proxyHandler := handler.NewProxyHandler(appCore)
-	pluginHandler := handler.NewPluginHandler(appCore)
-	pluginMgr := plugin.NewManager()
+	// ===== 5️⃣ 插件系统初始化 =====
+	// 加载插件配置
+	pluginMgr, err := plugin.InitializePluginSystem("")
+	if err != nil {
+		log.Printf("Warning: failed to initialize plugin system: %v", err)
+		// 使用默认管理器继续运行
+		pluginMgr = plugin.NewManager(nil)
+	}
 
 	db.AutoMigrate(pluginstore.PluginModel{})
 	pluginRepo := pluginstore.NewPluginRepo(db)
 
 	pluginSvc := app.NewPluginService(pluginRepo, pluginMgr)
-	//appCore.
 	appCore.SetPluginMgr(pluginSvc)
+
 	if err := pluginSvc.Bootstrap(); err != nil {
 		log.Println("plugin bootstrap failed:", err)
 		return
 	}
+
+	// API
+	proxyHandler := handler.NewProxyHandler(appCore)
+	pluginHandler := handler.NewPluginHandler(appCore)
 
 	api := r.Group("/api")
 	{

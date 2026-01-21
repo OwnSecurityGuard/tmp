@@ -2,10 +2,11 @@ package plugin
 
 import (
 	"fmt"
-	"google.golang.org/grpc"
 	"os/exec"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc"
 
 	hplugin "github.com/hashicorp/go-plugin"
 )
@@ -27,18 +28,24 @@ type PluginInfo struct {
 	LoadedAt  int64        `json:"loaded_at,omitempty"`
 	UpdatedAt int64        `json:"updated_at"`
 }
+
 type Manager struct {
 	mu      sync.RWMutex
 	clients map[string]*hplugin.Client
 	plugins map[string]ProtocolPlugin
 	infos   map[string]*PluginInfo
+	config  *Config // 动态配置
 }
 
-func NewManager() *Manager {
+func NewManager(config *Config) *Manager {
+	if config == nil {
+		config = GetConfig()
+	}
 	return &Manager{
 		clients: make(map[string]*hplugin.Client),
 		plugins: make(map[string]ProtocolPlugin),
 		infos:   map[string]*PluginInfo{},
+		config:  config,
 	}
 }
 
@@ -50,44 +57,97 @@ func (m *Manager) Load(name string) error {
 	if !ok {
 		return fmt.Errorf("plugin %s not found", name)
 	}
-	fmt.Println(info.Path)
+
+	if m.config.Debug.VerboseLogging {
+		fmt.Printf("[Plugin] Loading plugin: %s from %s\n", name, info.Path)
+	}
+
+	// 获取握手配置
+	handshakeConfig := GetHandshakeConfig()
+
+	// 构建 GRPC 拨号选项
+	var grpcDialOptions []grpc.DialOption
+	for _, optName := range m.config.Manager.GRPCDialOptions {
+		// 根据配置添加 GRPC 拨号选项
+		// 这里可以根据需要扩展支持更多选项
+		switch optName {
+		case "insecure":
+			// grpcDialOptions = append(grpcDialOptions, grpc.WithInsecure())
+		default:
+			// 未知选项，忽略或记录警告
+		}
+	}
+
+	// 确定允许的协议
+	var allowedProtocols []hplugin.Protocol
+	for _, protoName := range m.config.Manager.AllowedProtocols {
+		switch protoName {
+		case "grpc":
+			allowedProtocols = append(allowedProtocols, hplugin.ProtocolGRPC)
+		case "netrpc":
+			allowedProtocols = append(allowedProtocols, hplugin.ProtocolNetRPC)
+		}
+	}
+
+	// 构建插件映射
+	plugins := map[string]hplugin.Plugin{}
+	for internalName, pluginType := range m.config.Manager.PluginMapping {
+		switch pluginType {
+		case "protocol":
+			plugins[internalName] = &ProtocolPluginImpl{}
+		}
+	}
+
+	// 创建插件客户端
 	client := hplugin.NewClient(&hplugin.ClientConfig{
-		GRPCDialOptions: []grpc.DialOption{
-			//grpc.WithInsecure(),
-		},
-		AllowedProtocols: []hplugin.Protocol{
-			hplugin.ProtocolGRPC,
-		},
-		HandshakeConfig: Handshake,
-		Plugins: map[string]hplugin.Plugin{
-			"protocol": &ProtocolPluginImpl{},
-		},
-		Cmd: exec.Command(info.Path),
+		GRPCDialOptions:  grpcDialOptions,
+		AllowedProtocols: allowedProtocols,
+		HandshakeConfig:  handshakeConfig,
+		Plugins:          plugins,
+		Cmd:              exec.Command(info.Path),
 	})
 
 	rpcClient, err := client.Client()
 	if err != nil {
 		info.Status = PluginStatusError
 		info.Error = err.Error()
-		return err
+		return fmt.Errorf("failed to get RPC client: %w", err)
 	}
 
 	raw, err := rpcClient.Dispense("protocol")
 	if err != nil {
 		info.Status = PluginStatusError
 		info.Error = err.Error()
-		return err
+		return fmt.Errorf("failed to dispense plugin: %w", err)
 	}
 
 	m.clients[name] = client
 	m.plugins[name] = raw.(ProtocolPlugin)
-	ret, err := m.Decode("test", true, []byte("hhhhhhhhhhhhhhhhhhh"))
-	fmt.Println(err)
-	fmt.Println("ccc ", ret.Time, ret.Data)
+
+	// 调试模式下执行测试调用（仅在启用调试模式且配置了测试数据时）
+	if IsDebugEnabled() {
+		testData := GetTestData()
+		if testData != "" {
+			ret, err := m.Decode(name, true, []byte(testData))
+			if m.config.Debug.VerboseLogging {
+				if err != nil {
+					fmt.Printf("[Plugin Debug] Test decode error: %v\n", err)
+				} else {
+					fmt.Printf("[Plugin Debug] Test decode result: time=%d, data=%s\n", ret.Time, ret.Data)
+				}
+			}
+		}
+	}
+
 	info.Status = PluginStatusRunning
 	info.Error = ""
 	info.LoadedAt = time.Now().Unix()
 	info.UpdatedAt = info.LoadedAt
+
+	if m.config.Debug.VerboseLogging {
+		fmt.Printf("[Plugin] Plugin %s loaded successfully\n", name)
+	}
+
 	return nil
 }
 

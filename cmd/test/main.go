@@ -23,8 +23,11 @@ func (d *DemoPlugin) Encode(data []byte) ([]byte, error) {
 }
 
 func main() {
+	// 使用动态配置获取握手配置
+	handshakeConfig := p.GetHandshakeConfig()
+
 	plugin.Serve(&plugin.ServeConfig{
-		HandshakeConfig: p.Handshake,
+		HandshakeConfig: handshakeConfig,
 		Plugins: map[string]plugin.Plugin{
 			"protocol": &p.ProtocolPluginImpl{
 				Impl: &DemoPlugin{},

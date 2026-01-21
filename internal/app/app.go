@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"proxy-system-backend/internal/modules/filter"
+	"proxy-system-backend/internal/modules/plugin"
 	"proxy-system-backend/internal/modules/proxy"
 	"proxy-system-backend/internal/modules/shadowsocks"
 	"proxy-system-backend/internal/modules/shared"
@@ -60,10 +61,35 @@ func (a *App) StartProxy(cfg proxy.Config) error {
 	// 2️⃣ proxy 实例 ID（不是 connID）
 	proxyID := shared.GenerateConnID()
 
-	err = a.PluginMgr().Load("test")
-	fmt.Println("laod ", err)
+	// 3️⃣ 自动加载配置的插件
+	if a.pluginMgr != nil {
+		// 获取需要自动加载的插件列表
+		pluginConfig := plugin.GetConfig()
+		for _, pluginName := range pluginConfig.Manager.AutoLoadPlugins {
+			if err := a.pluginMgr.Load(pluginName); err != nil {
+				// 如果插件加载失败，记录警告但继续运行
+				fmt.Printf("[Warning] Failed to load plugin '%s': %v\n", pluginName, err)
+			} else {
+				if pluginConfig.Debug.VerboseLogging {
+					fmt.Printf("[Plugin] Auto-loaded plugin: %s\n", pluginName)
+				}
+			}
+		}
 
-	// 3️⃣ 构建加密器
+		// 调试模式下加载默认插件
+		if plugin.IsEnabled() {
+			defaultPluginName := plugin.GetDefaultPluginName()
+			if defaultPluginName != "" {
+				if err := a.pluginMgr.Load(defaultPluginName); err != nil {
+					fmt.Printf("[Warning] Debug mode: Failed to load default plugin '%s': %v\n", defaultPluginName, err)
+				} else {
+					fmt.Printf("[Plugin Debug] Loaded default plugin: %s\n", defaultPluginName)
+				}
+			}
+		}
+	}
+
+	// 4️⃣ 构建加密器
 	c, err := cfg.BuildCipher()
 	if err != nil {
 		return err
@@ -114,4 +140,10 @@ func (a *App) SetPluginMgr(p *PluginService) {
 }
 func (a *App) PluginMgr() *PluginService {
 	return a.pluginMgr
+}
+func (a *App) GetPluginManager() *plugin.Manager {
+	if a.pluginMgr != nil {
+		return a.pluginMgr.GetPluginManager()
+	}
+	return nil
 }

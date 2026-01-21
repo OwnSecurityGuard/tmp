@@ -128,6 +128,12 @@ func (s *PluginService) Get(name string) (*plugin.PluginInfo, error) {
 }
 
 func (s *PluginService) Decode(name string, isClient bool, payload []byte) (*plugin.DecodeResult, error) {
+
 	return s.mgr.Decode(name, isClient, payload)
 
+}
+
+// GetPluginManager 获取内部的 PluginManager
+func (s *PluginService) GetPluginManager() *plugin.Manager {
+	return s.mgr
 }

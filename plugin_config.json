@@ -1,0 +1,36 @@
+{
+  "handshake_config": {
+    "protocol_version": 1,
+    "magic_cookie_key": "GAME_PROTOCOL_PLUGIN",
+    "magic_cookie_value": "hello"
+  },
+  "plugin_dir": "./data/plugins",
+  "manager": {
+    "grpc_dial_options": [],
+    "allowed_protocols": [
+      "grpc"
+    ],
+    "plugin_mapping": {
+      "protocol": "protocol"
+    },
+    "max_concurrent_plugins": 10,
+    "load_timeout": 30,
+    "auto_load_plugins": []
+  },
+  "proxy": {
+    "traffic_hook": {
+      "decoder_plugin": "",
+      "enabled": false,
+      "fallback_behavior": "pass",
+      "log_decode_errors": true,
+      "timeout_ms": 5000
+    },
+    "auto_load_plugins": []
+  },
+  "debug": {
+    "enabled": false,
+    "default_plugin_name": "",
+    "test_data": "",
+    "verbose_logging": false
+  }
+}
